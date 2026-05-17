@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartX — AI-Powered Marketplace API</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #050608;
+      --surface: #0d0f12;
+      --surface2: #13161b;
+      --border: #1e2228;
+      --green: #00ff88;
+      --green-dim: #00cc6a;
+      --blue: #4d9cff;
+      --purple: #9b6dff;
+      --orange: #ff6b35;
+      --text: #f0f2f5;
+      --muted: #6b7280;
+      --mono: 'Space Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* Custom cursor */
+    .cursor {
+      position: fixed;
+      width: 12px; height: 12px;
+      background: var(--green);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transition: transform 0.1s ease;
+      mix-blend-mode: difference;
+    }
+    .cursor-ring {
+      position: fixed;
+      width: 36px; height: 36px;
+      border: 1px solid rgba(0,255,136,0.4);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transition: transform 0.15s ease, width 0.2s, height 0.2s;
+    }
+
+    /* Noise overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.025;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    /* GRID BG */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 20px 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      background: rgba(5,6,8,0.8);
+      backdrop-filter: blur(20px);
+    }
+
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--green);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-logo span { color: var(--text); }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--green); }
+
+    .nav-cta {
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 10px 20px;
+      background: var(--green);
+      color: #000;
+      border: none;
+      font-weight: 700;
+      cursor: none;
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .nav-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,255,136,0.3); }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 120px 60px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--green);
+      border: 1px solid rgba(0,255,136,0.3);
+      padding: 6px 14px;
+      margin-bottom: 32px;
+      width: fit-content;
+      letter-spacing: 0.1em;
+    }
+
+    .badge-dot {
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .hero h1 {
+      font-size: clamp(52px, 8vw, 100px);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      margin-bottom: 32px;
+    }
+
+    .hero h1 .line1 { color: var(--text); display: block; }
+    .hero h1 .line2 {
+      display: block;
+      background: linear-gradient(135deg, var(--green), var(--blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero h1 .line3 { color: var(--text); display: block; opacity: 0.3; }
+
+    .hero-sub {
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--muted);
+      max-width: 480px;
+      line-height: 1.8;
+      margin-bottom: 48px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .btn-primary {
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 14px 28px;
+      background: var(--green);
+      color: #000;
+      font-weight: 700;
+      cursor: none;
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+      border: 2px solid var(--green);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,255,136,0.35); }
+
+    .btn-ghost {
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 14px 28px;
+      background: transparent;
+      color: var(--text);
+      font-weight: 700;
+      cursor: none;
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      border: 2px solid var(--border);
+      transition: all 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--green); color: var(--green); }
+
+    .hero-orb {
+      position: absolute;
+      right: -100px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(0,255,136,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 48px;
+      margin-top: 64px;
+      padding-top: 48px;
+      border-top: 1px solid var(--border);
+    }
+
+    .stat-item { }
+    .stat-number {
+      font-family: var(--mono);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--green);
+    }
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      margin-top: 4px;
+    }
+
+    /* SECTION */
+    section { padding: 100px 60px; }
+
+    .section-header {
+      margin-bottom: 64px;
+    }
+
+    .section-tag {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: 0.15em;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: clamp(32px, 4vw, 52px);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    /* STACK */
+    .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .stack-item {
+      background: var(--surface);
+      padding: 32px 24px;
+      transition: background 0.2s;
+    }
+    .stack-item:hover { background: var(--surface2); }
+
+    .stack-icon { font-size: 32px; margin-bottom: 16px; }
+    .stack-name {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .stack-desc {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ENDPOINTS */
+    .endpoint-group { margin-bottom: 48px; }
+
+    .endpoint-group-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .endpoint {
+      display: grid;
+      grid-template-columns: 80px 280px 1fr 80px;
+      align-items: center;
+      gap: 24px;
+      padding: 16px 20px;
+      border: 1px solid var(--border);
+      margin-bottom: 2px;
+      background: var(--surface);
+      transition: all 0.15s;
+      font-family: var(--mono);
+    }
+    .endpoint:hover { border-color: rgba(0,255,136,0.2); background: var(--surface2); }
+
+    .method {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+    .method.GET { background: rgba(77,156,255,0.15); color: var(--blue); }
+    .method.POST { background: rgba(0,255,136,0.15); color: var(--green); }
+    .method.PUT { background: rgba(255,107,53,0.15); color: var(--orange); }
+    .method.DELETE { background: rgba(255,80,80,0.15); color: #ff5050; }
+
+    .endpoint-path { font-size: 13px; color: var(--text); }
+    .endpoint-desc { font-size: 12px; color: var(--muted); }
+    .endpoint-auth {
+      font-size: 10px;
+      color: var(--purple);
+      border: 1px solid rgba(155,109,255,0.3);
+      padding: 3px 8px;
+      text-align: center;
+    }
+
+    /* ARCHITECTURE */
+    .arch-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 48px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 2;
+      color: var(--muted);
+      overflow-x: auto;
+    }
+
+    .arch-diagram .hl { color: var(--green); }
+    .arch-diagram .hl2 { color: var(--blue); }
+    .arch-diagram .hl3 { color: var(--orange); }
+
+    /* CODE BLOCK */
+    .code-tabs {
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .code-tab-bar {
+      display: flex;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .code-tab {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 12px 20px;
+      color: var(--muted);
+      cursor: none;
+      border: none;
+      background: none;
+      letter-spacing: 0.05em;
+      border-right: 1px solid var(--border);
+      transition: color 0.2s;
+    }
+    .code-tab.active { color: var(--green); background: var(--surface); }
+
+    .code-content {
+      display: none;
+      background: var(--surface);
+      padding: 32px;
+      overflow-x: auto;
+    }
+    .code-content.active { display: block; }
+
+    pre {
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--text);
+      white-space: pre;
+    }
+
+    .kw { color: var(--purple); }
+    .str { color: var(--green); }
+    .num { color: var(--orange); }
+    .cmt { color: var(--muted); }
+    .fn { color: var(--blue); }
+
+    /* FEATURES */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+    }
+
+    .feature {
+      background: var(--surface);
+      padding: 40px;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--green), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .feature:hover { background: var(--surface2); }
+    .feature:hover::before { opacity: 1; }
+
+    .feature-icon { font-size: 28px; margin-bottom: 20px; }
+    .feature-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
+    }
+    .feature-desc {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    /* FOLDER STRUCTURE */
+    .folder-tree {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 40px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 2;
+    }
+
+    .tree-dir { color: var(--blue); }
+    .tree-file { color: var(--muted); }
+    .tree-highlight { color: var(--green); }
+    .tree-indent { color: rgba(255,255,255,0.1); }
+
+    /* FOOTER */
+    footer {
+      padding: 60px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-logo {
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .footer-meta {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    /* ANIMATION */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--green); }
+
+    @media (max-width: 900px) {
+      nav { padding: 16px 24px; }
+      .nav-links { display: none; }
+      .hero { padding: 100px 24px 60px; }
+      section { padding: 60px 24px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .hero-stats { gap: 24px; flex-wrap: wrap; }
+      footer { padding: 40px 24px; flex-direction: column; gap: 16px; }
+      .endpoint { grid-template-columns: 70px 1fr; gap: 12px; }
+      .endpoint-desc, .endpoint-auth { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="grid-bg"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">⬡ <span>SmartX</span></a>
+  <ul class="nav-links">
+    <li><a href="#features">FEATURES</a></li>
+    <li><a href="#stack">STACK</a></li>
+    <li><a href="#endpoints">API</a></li>
+    <li><a href="#architecture">ARCHITECTURE</a></li>
+  </ul>
+  <a href="https://github.com" class="nav-cta">VIEW ON GITHUB →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-orb"></div>
+
+  <div class="hero-badge fade-in">
+    <div class="badge-dot"></div>
+    PRODUCTION-READY · v1.0.0
+  </div>
+
+  <h1 class="fade-in" style="transition-delay:0.1s">
+    <span class="line1">BUILD SMARTER</span>
+    <span class="line2">SELL FASTER</span>
+    <span class="line3">SCALE ALWAYS</span>
+  </h1>
+
+  <p class="hero-sub fade-in" style="transition-delay:0.2s">
+    SmartX is a production-grade REST API for AI-powered marketplaces. 
+    Built with Node.js, MongoDB, Socket.io, and Groq AI — 
+    ready to deploy, scale, and impress.
+  </p>
+
+  <div class="hero-actions fade-in" style="transition-delay:0.3s">
+    <a href="#endpoints" class="btn-primary">EXPLORE API →</a>
+    <a href="https://github.com" class="btn-ghost">★ GITHUB</a>
+  </div>
+
+  <div class="hero-stats fade-in" style="transition-delay:0.4s">
+    <div class="stat-item">
+      <div class="stat-number">23+</div>
+      <div class="stat-label">API ENDPOINTS</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">7</div>
+      <div class="stat-label">CORE MODULES</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">RT</div>
+      <div class="stat-label">REAL-TIME CHAT</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">AI</div>
+      <div class="stat-label">GROQ LLAMA 3.3</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-header fade-in">
+    <div class="section-tag">// FEATURES</div>
+    <h2 class="section-title">Everything You Need<br>Out of the Box</h2>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature fade-in">
+      <div class="feature-icon">🔐</div>
+      <div class="feature-title">JWT Auth + OTP</div>
+      <div class="feature-desc">Access tokens (15min), refresh tokens (7d), email OTP verification with bcrypt password hashing.</div>
+    </div>
+    <div class="feature fade-in">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Real-Time Chat</div>
+      <div class="feature-desc">Socket.io with auth middleware, typing indicators, read receipts, and online presence tracking.</div>
+    </div>
+    <div class="feature fade-in">
+      <div class="feature-icon">🤖</div>
+      <div class="feature-title">Groq AI Integration</div>
+      <div class="feature-desc">Llama 3.3-70B for chat, product description enhancement, and tag generation — with retry + fallback.</div>
+    </div>
+    <div class="feature fade-in">
+      <div class="feature-icon">🖼️</div>
+      <div class="feature-title">Cloudinary Upload</div>
+      <div class="feature-desc">Image upload with auto-optimization, format conversion, and 5MB size limits per file.</div>
+    </div>
+    <div class="feature fade-in">
+      <div class="feature-icon">🛡️</div>
+      <div class="feature-title">Security First</div>
+      <div class="feature-desc">Helmet, CORS, rate limiting (100 req/15min), input validation via express-validator.</div>
+    </div>
+    <div class="feature fade-in">
+      <div class="feature-icon">📊</div>
+      <div class="feature-title">Winston Logging</div>
+      <div class="feature-desc">Structured logs, error tracking, HTTP request logging via Morgan — production-grade observability.</div>
+    </div>
+  </div>
+</section>
+
+<!-- STACK -->
+<section id="stack" style="background: var(--surface);">
+  <div class="section-header fade-in">
+    <div class="section-tag">// TECH STACK</div>
+    <h2 class="section-title">Powered By<br>Battle-Tested Tech</h2>
+  </div>
+
+  <div class="stack-grid fade-in">
+    <div class="stack-item">
+      <div class="stack-icon">🟢</div>
+      <div class="stack-name">Node.js 18+</div>
+      <div class="stack-desc">Runtime</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-icon">⚙️</div>
+      <div class="stack-name">Express.js</div>
+      <div class="stack-desc">Web framework</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-icon">🍃</div>
+      <div class="stack-name">MongoDB</div>
+      <div class="stack-desc">Database</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-icon">🔌</div>
+      <div class="stack-name">Socket.io</div>
+      <div class="stack-desc">Real-time</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-icon">🤖</div>
+      <div class="stack-name">Groq AI</div>
+      <div class="stack-desc">LLM integration</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-icon">☁️</div>
+      <div class="stack-name">Cloudinary</div>
+      <div class="stack-desc">Image hosting</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-icon">📧</div>
+      <div class="stack-name">Nodemailer</div>
+      <div class="stack-desc">Email service</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-icon">🔑</div>
+      <div class="stack-name">JWT + bcrypt</div>
+      <div class="stack-desc">Auth & security</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-icon">📝</div>
+      <div class="stack-name">Winston</div>
+      <div class="stack-desc">Logging</div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-icon">🛡️</div>
+      <div class="stack-name">Helmet + CORS</div>
+      <div class="stack-desc">Security headers</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOLDER STRUCTURE -->
+<section>
+  <div class="section-header fade-in">
+    <div class="section-tag">// PROJECT STRUCTURE</div>
+    <h2 class="section-title">Clean. Modular.<br>Production-Grade.</h2>
+  </div>
+
+  <div class="folder-tree fade-in">
+<pre><span class="tree-highlight">smartx-backend/</span>
+├── <span class="tree-dir">src/</span>
+│   ├── <span class="tree-dir">config/</span>
+│   │   └── <span class="tree-highlight">db.js</span>              <span class="cmt"># MongoDB connection</span>
+│   ├── <span class="tree-dir">controllers/</span>
+│   │   ├── <span class="tree-highlight">authController.js</span>   <span class="cmt"># register, login, OTP, refresh</span>
+│   │   ├── <span class="tree-highlight">productController.js</span> <span class="cmt"># CRUD + AI enhance</span>
+│   │   └── <span class="tree-highlight">aiController.js</span>     <span class="cmt"># chat, tags</span>
+│   ├── <span class="tree-dir">middleware/</span>
+│   │   ├── <span class="tree-highlight">auth.js</span>             <span class="cmt"># protect, authorize</span>
+│   │   ├── <span class="tree-highlight">errorHandler.js</span>     <span class="cmt"># centralized errors</span>
+│   │   └── <span class="tree-highlight">validate.js</span>         <span class="cmt"># express-validator rules</span>
+│   ├── <span class="tree-dir">models/</span>
+│   │   ├── <span class="tree-highlight">User.js</span>             <span class="cmt"># bcrypt, OTP, indexes</span>
+│   │   ├── <span class="tree-highlight">Product.js</span>          <span class="cmt"># text search, indexes</span>
+│   │   └── <span class="tree-highlight">Chat.js</span>             <span class="cmt"># messages, participants</span>
+│   ├── <span class="tree-dir">routes/</span>
+│   │   ├── <span class="tree-file">authRoutes.js</span>
+│   │   ├── <span class="tree-file">userRoutes.js</span>
+│   │   ├── <span class="tree-file">productRoutes.js</span>
+│   │   ├── <span class="tree-file">chatRoutes.js</span>
+│   │   ├── <span class="tree-file">aiRoutes.js</span>
+│   │   └── <span class="tree-file">uploadRoutes.js</span>
+│   ├── <span class="tree-dir">services/</span>
+│   │   ├── <span class="tree-highlight">aiService.js</span>        <span class="cmt"># Groq + retry logic</span>
+│   │   ├── <span class="tree-highlight">emailService.js</span>     <span class="cmt"># OTP emails</span>
+│   │   └── <span class="tree-highlight">uploadService.js</span>    <span class="cmt"># Cloudinary</span>
+│   ├── <span class="tree-dir">socket/</span>
+│   │   └── <span class="tree-highlight">socketHandler.js</span>    <span class="cmt"># auth, chat, presence</span>
+│   ├── <span class="tree-dir">utils/</span>
+│   │   ├── <span class="tree-highlight">AppError.js</span>
+│   │   ├── <span class="tree-highlight">logger.js</span>
+│   │   ├── <span class="tree-highlight">tokenHelper.js</span>
+│   │   └── <span class="tree-highlight">helpers.js</span>
+│   └── <span class="tree-highlight">server.js</span>               <span class="cmt"># entry point</span>
+├── <span class="tree-dir">public/</span>
+│   └── <span class="tree-highlight">index.html</span>              <span class="cmt"># this file!</span>
+├── <span class="tree-file">.env.example</span>
+├── <span class="tree-file">.gitignore</span>
+├── <span class="tree-file">package.json</span>
+└── <span class="tree-highlight">README.md</span></pre>
+  </div>
+</section>
+
+<!-- ENDPOINTS -->
+<section id="endpoints" style="background: var(--surface);">
+  <div class="section-header fade-in">
+    <div class="section-tag">// API REFERENCE</div>
+    <h2 class="section-title">23 Endpoints.<br>Zero Fluff.</h2>
+  </div>
+
+  <div class="fade-in">
+    <div class="endpoint-group">
+      <div class="endpoint-group-title">AUTH — /api/auth</div>
+      <div class="endpoint"><span class="method POST">POST</span><span class="endpoint-path">/api/auth/register</span><span class="endpoint-desc">Register new user, send OTP</span><span class="endpoint-auth">PUBLIC</span></div>
+      <div class="endpoint"><span class="method POST">POST</span><span class="endpoint-path">/api/auth/verify-otp</span><span class="endpoint-desc">Verify email with OTP</span><span class="endpoint-auth">PUBLIC</span></div>
+      <div class="endpoint"><span class="method POST">POST</span><span class="endpoint-path">/api/auth/login</span><span class="endpoint-desc">Login, get tokens</span><span class="endpoint-auth">PUBLIC</span></div>
+      <div class="endpoint"><span class="method POST">POST</span><span class="endpoint-path">/api/auth/refresh</span><span class="endpoint-desc">Refresh access token</span><span class="endpoint-auth">PUBLIC</span></div>
+      <div class="endpoint"><span class="method POST">POST</span><span class="endpoint-path">/api/auth/logout</span><span class="endpoint-desc">Logout, clear token</span><span class="endpoint-auth">🔒 JWT</span></div>
+    </div>
+
+    <div class="endpoint-group">
+      <div class="endpoint-group-title">USERS — /api/users</div>
+      <div class="endpoint"><span class="method GET">GET</span><span class="endpoint-path">/api/users/me</span><span class="endpoint-desc">Get current user profile</span><span class="endpoint-auth">🔒 JWT</span></div>
+      <div class="endpoint"><span class="method PUT">PUT</span><span class="endpoint-path">/api/users/me</span><span class="endpoint-desc">Update profile</span><span class="endpoint-auth">🔒 JWT</span></div>
+      <div class="endpoint"><span class="method GET">GET</span><span class="endpoint-path">/api/users</span><span class="endpoint-desc">List all users (admin)</span><span class="endpoint-auth">🔒 ADMIN</span></div>
+    </div>
+
+    <div class="endpoint-group">
+      <div class="endpoint-group-title">PRODUCTS — /api/products</div>
+      <div class="endpoint"><span class="method GET">GET</span><span class="endpoint-path">/api/products</span><span class="endpoint-desc">List products (filter, search, paginate)</span><span class="endpoint-auth">PUBLIC</span></div>
+      <div class="endpoint"><span class="method GET">GET</span><span class="endpoint-path">/api/products/:id</span><span class="endpoint-desc">Get single product</span><span class="endpoint-auth">PUBLIC</span></div>
+      <div class="endpoint"><span class="method POST">POST</span><span class="endpoint-path">/api/products</span><span class="endpoint-desc">Create product (AI enhanced)</span><span class="endpoint-auth">🔒 SELLER</span></div>
+      <div class="endpoint"><span class="method PUT">PUT</span><span class="endpoint-path">/api/products/:id</span><span class="endpoint-desc">Update product</span><span class="endpoint-auth">🔒 JWT</span></div>
+      <div class="endpoint"><span class="method DELETE">DELETE</span><span class="endpoint-path">/api/products/:id</span><span class="endpoint-desc">Soft delete product</span><span class="endpoint-auth">🔒 JWT</span></div>
+    </div>
+
+    <div class="endpoint-group">
+      <div class="endpoint-group-title">CHAT — /api/chat</div>
+      <div class="endpoint"><span class="method POST">POST</span><span class="endpoint-path">/api/chat</span><span class="endpoint-desc">Get or create chat room</span><span class="endpoint-auth">🔒 JWT</span></div>
+      <div class="endpoint"><span class="method GET">GET</span><span class="endpoint-path">/api/chat</span><span class="endpoint-desc">Get user's all chats</span><span class="endpoint-auth">🔒 JWT</span></div>
+      <div class="endpoint"><span class="method GET">GET</span><span class="endpoint-path">/api/chat/:chatId</span><span class="endpoint-desc">Get chat + messages</span><span class="endpoint-auth">🔒 JWT</span></div>
+    </div>
+
+    <div class="endpoint-group">
+      <div class="endpoint-group-title">AI — /api/ai</div>
+      <div class="endpoint"><span class="method POST">POST</span><span class="endpoint-path">/api/ai/chat</span><span class="endpoint-desc">Chat with Llama 3.3 AI</span><span class="endpoint-auth">🔒 JWT</span></div>
+      <div class="endpoint"><span class="method POST">POST</span><span class="endpoint-path">/api/ai/tags</span><span class="endpoint-desc">Generate product tags</span><span class="endpoint-auth">🔒 JWT</span></div>
+    </div>
+
+    <div class="endpoint-group">
+      <div class="endpoint-group-title">UPLOAD — /api/upload</div>
+      <div class="endpoint"><span class="method POST">POST</span><span class="endpoint-path">/api/upload/image</span><span class="endpoint-desc">Upload product image to Cloudinary</span><span class="endpoint-auth">🔒 JWT</span></div>
+      <div class="endpoint"><span class="method POST">POST</span><span class="endpoint-path">/api/upload/avatar</span><span class="endpoint-desc">Upload user avatar</span><span class="endpoint-auth">🔒 JWT</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- CODE EXAMPLES -->
+<section id="architecture">
+  <div class="section-header fade-in">
+    <div class="section-tag">// QUICK START</div>
+    <h2 class="section-title">Up and Running<br>in 3 Minutes</h2>
+  </div>
+
+  <div class="code-tabs fade-in">
+    <div class="code-tab-bar">
+      <button class="code-tab active" onclick="showTab('install')">INSTALL</button>
+      <button class="code-tab" onclick="showTab('register')">REGISTER</button>
+      <button class="code-tab" onclick="showTab('socket')">SOCKET</button>
+      <button class="code-tab" onclick="showTab('ai')">AI CHAT</button>
+    </div>
+
+    <div class="code-content active" id="tab-install">
+<pre><span class="cmt"># 1. Clone the repo</span>
+<span class="fn">git</span> clone https://github.com/yourusername/smartx-backend.git
+<span class="fn">cd</span> smartx-backend
+
+<span class="cmt"># 2. Install dependencies</span>
+<span class="fn">npm</span> install
+
+<span class="cmt"># 3. Set up environment variables</span>
+<span class="fn">cp</span> .env.example .env
+<span class="cmt"># Edit .env with your MongoDB, Groq, Cloudinary keys</span>
+
+<span class="cmt"># 4. Start development server</span>
+<span class="fn">npm</span> run dev
+
+<span class="cmt"># ✅ Server running at http://localhost:5000</span>
+<span class="cmt"># ✅ Socket.io ready on same port</span></pre>
+    </div>
+
+    <div class="code-content" id="tab-register">
+<pre><span class="cmt">// POST /api/auth/register</span>
+<span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'/api/auth/register'</span>, {
+  method: <span class="str">'POST'</span>,
+  headers: { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> },
+  body: <span class="fn">JSON.stringify</span>({
+    name: <span class="str">'John Doe'</span>,
+    email: <span class="str">'john@example.com'</span>,
+    password: <span class="str">'securepassword123'</span>
+  })
+});
+
+<span class="cmt">// Response:</span>
+<span class="cmt">// { success: true, message: "Verify your email", userId: "..." }</span>
+
+<span class="cmt">// POST /api/auth/verify-otp</span>
+<span class="kw">const</span> verify = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'/api/auth/verify-otp'</span>, {
+  method: <span class="str">'POST'</span>,
+  body: <span class="fn">JSON.stringify</span>({ userId, otp: <span class="str">'123456'</span> })
+});
+<span class="cmt">// Returns: accessToken + refreshToken</span></pre>
+    </div>
+
+    <div class="code-content" id="tab-socket">
+<pre><span class="kw">import</span> { io } <span class="kw">from</span> <span class="str">'socket.io-client'</span>;
+
+<span class="kw">const</span> socket = <span class="fn">io</span>(<span class="str">'http://localhost:5000'</span>, {
+  auth: { token: <span class="str">'your_jwt_token'</span> }
+});
+
+<span class="cmt">// Send a message</span>
+socket.<span class="fn">emit</span>(<span class="str">'message:send'</span>, {
+  chatId: <span class="str">'chat_id_here'</span>,
+  content: <span class="str">'Hello! Is this product available?'</span>
+});
+
+<span class="cmt">// Receive messages</span>
+socket.<span class="fn">on</span>(<span class="str">'message:received'</span>, ({ chatId, message }) => {
+  <span class="fn">console</span>.<span class="fn">log</span>(<span class="str">`New msg from ${message.sender.name}`</span>);
+});
+
+<span class="cmt">// Typing indicators</span>
+socket.<span class="fn">emit</span>(<span class="str">'typing:start'</span>, { chatId });
+socket.<span class="fn">emit</span>(<span class="str">'typing:stop'</span>, { chatId });</pre>
+    </div>
+
+    <div class="code-content" id="tab-ai">
+<pre><span class="cmt">// POST /api/ai/chat — Chat with Llama 3.3</span>
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'/api/ai/chat'</span>, {
+  method: <span class="str">'POST'</span>,
+  headers: {
+    <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>,
+    <span class="str">'Authorization'</span>: <span class="str">`Bearer ${accessToken}`</span>
+  },
+  body: <span class="fn">JSON.stringify</span>({
+    message: <span class="str">'Find me a good laptop under ₹50,000'</span>,
+    context: [] <span class="cmt">// optional conversation history</span>
+  })
+});
+
+<span class="cmt">// Response:</span>
+<span class="cmt">// { success: true, response: "Here are the best options..." }</span>
+
+<span class="cmt">// POST /api/ai/tags — Generate product tags</span>
+<span class="kw">const</span> tags = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'/api/ai/tags'</span>, {
+  method: <span class="str">'POST'</span>,
+  body: <span class="fn">JSON.stringify</span>({
+    title: <span class="str">'Gaming Keyboard'</span>,
+    category: <span class="str">'electronics'</span>
+  })
+});
+<span class="cmt">// Returns: ["mechanical", "rgb", "gaming", ...]</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div class="footer-logo">⬡ SmartX Backend</div>
+    <div style="font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 8px;">
+      AI-Powered Marketplace API · MIT License
+    </div>
+  </div>
+  <div class="footer-meta">
+    <div>Node.js 18+ · MongoDB · Socket.io · Groq AI</div>
+    <div style="margin-top: 4px; color: var(--green);">Built for the future →</div>
+  </div>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.left = mx - 6 + 'px';
+    cursor.style.top = my - 6 + 'px';
+  });
+
+  const animateRing = () => {
+    rx += (mx - rx - 18) * 0.12;
+    ry += (my - ry - 18) * 0.12;
+    ring.style.left = rx + 'px';
+    ring.style.top = ry + 'px';
+    requestAnimationFrame(animateRing);
+  };
+  animateRing();
+
+  // Fade in on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Tabs
+  function showTab(name) {
+    document.querySelectorAll('.code-tab').forEach((t, i) => {
+      const tabs = ['install', 'register', 'socket', 'ai'];
+      t.classList.toggle('active', tabs[i] === name);
+    });
+    document.querySelectorAll('.code-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  // Cursor hover effects
+  document.querySelectorAll('a, button, .feature, .stack-item').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      ring.style.width = '56px';
+      ring.style.height = '56px';
+    });
+    el.addEventListener('mouseleave', () => {
+      ring.style.width = '36px';
+      ring.style.height = '36px';
+    });
+  });
+</script>
+</body>
+</html>
